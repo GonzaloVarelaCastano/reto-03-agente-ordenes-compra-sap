@@ -1,0 +1,14 @@
+node_modules/
+out/
+.env
+.env.*
+!/.env.example
+dist/
+coverage/
+.tmp/
+tmp/
+.perxia/
+graphify-out/
+*.tsbuildinfo
+*.log
+reto-03 1 2.zip

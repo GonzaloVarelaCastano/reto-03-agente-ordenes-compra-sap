@@ -1,0 +1,34 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci --include=dev
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+      - run: npm run demo
+      - name: Smoke production server
+        shell: bash
+        run: |
+          NODE_ENV=production PORT=3000 APP_ACCESS_TOKEN=ci-demo-token npm start > server.log 2>&1 &
+          PID=$!
+          trap 'kill $PID || true' EXIT
+          for attempt in {1..20}; do
+            if curl -fsS http://127.0.0.1:3000/healthz >/dev/null; then break; fi
+            sleep 1
+          done
+          test "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:3000/healthz)" = "200"
+          test "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:3000/api/casos)" = "401"
+          test "$(curl -s -H 'x-app-token: ci-demo-token' -o /dev/null -w '%{http_code}' http://127.0.0.1:3000/api/casos)" = "200"
+          test "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:3000/)" = "200"
